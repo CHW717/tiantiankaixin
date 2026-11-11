@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>俄罗斯方块 · 一个人的游戏，一个时代的记忆</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --panel: #121826;
+    --line: #1f2937;
+    --text: #e6edf7;
+    --dim: #8b98ad;
+    --accent: #3ddc97;
+    --accent2: #4d7cfe;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    line-height: 1.8;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- 首屏 ---------- */
+  .hero {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(61,220,151,.12), transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(77,124,254,.12), transparent 45%),
+      var(--bg);
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: .18;
+    mask-image: radial-gradient(circle at center, #000 20%, transparent 75%);
+  }
+  .hero .wrap { position: relative; z-index: 1; }
+  .tag {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    border: 1px solid rgba(61,220,151,.4);
+    padding: 6px 14px;
+    border-radius: 99px;
+    margin-bottom: 28px;
+  }
+  h1 {
+    font-size: clamp(2.2rem, 6vw, 4.6rem);
+    line-height: 1.15;
+    letter-spacing: -1px;
+    font-weight: 800;
+  }
+  h1 em { color: var(--accent); font-style: normal; }
+  .hero p {
+    margin-top: 24px;
+    max-width: 620px;
+    color: var(--dim);
+    font-size: 1.05rem;
+  }
+  .cta {
+    display: inline-block;
+    margin-top: 40px;
+    background: var(--accent);
+    color: #04120c;
+    font-weight: 700;
+    padding: 14px 34px;
+    border-radius: 99px;
+    text-decoration: none;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .cta:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(61,220,151,.3); }
+
+  /* ---------- 通用区块 ---------- */
+  section { padding: 96px 0; }
+  .sec-head { margin-bottom: 48px; }
+  .sec-head span {
+    color: var(--accent2);
+    font-size: 13px;
+    letter-spacing: 2px;
+    font-weight: 600;
+  }
+  .sec-head h2 {
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    margin-top: 10px;
+    font-weight: 700;
+  }
+  .sec-head p { color: var(--dim); margin-top: 12px; max-width: 680px; }
+
+  /* ---------- 人物 ---------- */
+  .person {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .avatar {
+    aspect-ratio: 1;
+    border-radius: 24px;
+    background: linear-gradient(145deg, #18202f, #0d1219);
+    border: 1px solid var(--line);
+    display: grid;
+    place-items: center;
+    font-size: 64px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .person h3 { font-size: 1.6rem; margin-bottom: 6px; }
+  .person .en { color: var(--dim); font-size: .95rem; letter-spacing: 1px; }
+  .person p { margin-top: 18px; color: #c3cddd; }
+
+  /* ---------- 时间线 ---------- */
+  .timeline { border-left: 2px solid var(--line); padding-left: 32px; }
+  .tl-item { position: relative; padding-bottom: 36px; }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-item::before {
+    content: "";
+    position: absolute;
+    left: -40px;
+    top: 10px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+  }
+  .tl-item b { color: var(--accent); font-size: 1.15rem; }
+  .tl-item h4 { display: inline; margin-left: 12px; font-size: 1.05rem; }
+  .tl-item p { color: var(--dim); margin-top: 6px; }
+
+  /* ---------- 方块卡片 ---------- */
+  .pieces {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .piece {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    transition: transform .2s, border-color .2s;
+  }
+  .piece:hover { transform: translateY(-4px); border-color: var(--accent); }
+  .piece .grid { display: inline-grid; gap: 3px; margin-bottom: 12px; }
+  .piece .cell { width: 14px; height: 14px; border-radius: 3px; background: var(--line); }
+  .piece .cell.on { background: var(--accent); }
+  .piece span { font-size: 1.4rem; font-weight: 800; }
+
+  /* ---------- 游戏区 ---------- */
+  .game-sec { background: linear-gradient(180deg, transparent, #0d1220 30%, #0d1220 70%, transparent); }
+  .game {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  #board {
+    background: #070a11;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+    touch-action: none;
+  }
+  .side { width: 200px; display: flex; flex-direction: column; gap: 14px; }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .stat span { color: var(--dim); font-size: .85rem; }
+  .stat b { font-size: 1.5rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+  #next { background: #070a11; border: 1px solid var(--line); border-radius: 12px; display: block; margin: 0 auto; }
+  .keys { color: var(--dim); font-size: .82rem; line-height: 2; }
+  .keys kbd {
+    background: #1b2434;
+    border: 1px solid #2b3548;
+    border-radius: 5px;
+    padding: 1px 7px;
+    font-family: inherit;
+    font-size: .78rem;
+    color: var(--text);
+  }
+  .btn-row { display: flex; gap: 10px; }
+  .btn {
+    flex: 1;
+    background: var(--accent);
+    color: #04120c;
+    border: 0;
+    border-radius: 10px;
+    padding: 12px 0;
+    font-size: .95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter .2s;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn.ghost { background: transparent; color: var(--dim); border: 1px solid var(--line); }
+
+  .touch { display: none; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 340px; }
+  .touch button {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 16px 0;
+    font-size: 1.1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .touch button:active { background: #1b2434; }
+
+  /* ---------- 页脚 ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 48px 0;
+    color: var(--dim);
+    font-size: .88rem;
+  }
+  footer a { color: var(--accent2); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 760px) {
+    .person { grid-template-columns: 1fr; }
+    .avatar { width: 140px; }
+    .touch { display: grid; }
+    section { padding: 72px 0; }
+    .side { width: 100%; max-width: 340px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 首屏 ============ -->
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">1984 — 今</span>
+    <h1>一个人的游戏<br><em>一个时代的记忆</em></h1>
+    <p>它诞生于冷战末期的莫斯科，只用了几百行代码，却成了全世界辨识度最高的图形之一。这是一款游戏的故事，也是一个人与版权缠斗十年的故事。</p>
+    <a class="cta" href="#play">▼ 直接开玩</a>
+  </div>
+</header>
+
+<!-- ============ 人物 ============ -->
+<section id="person">
+  <div class="wrap">
+    <div class="sec-head">
+      <span>01 / THE CREATOR</span>
+      <h2>阿列克谢·帕基特诺夫</h2>
+      <p>俄罗斯方块之父。一个把「拼图」变成全球文化符号的程序员。</p>
+    </div>
+    <div class="person">
+      <div class="avatar">AP</div>
+      <div>
+        <h3>Alexey Pajitnov</h3>
+        <div class="en">1955 — 生于莫斯科 · 数学家 / 程序员 / 游戏设计师</div>
+        <p>1984 年，他在苏联科学院的计算机中心工作，日常任务是研究人工智能与语音识别。为了测试一台 Elektronika 60 计算机的图形能力，他用简单的字符方块写了一个小游戏——规则朴素到极致：让方块落下来，填满一行就消掉。</p>
+        <p>他没有想到，这个被同事们在实验室里排队玩到停不下来的小东西，会在三年后穿越铁幕，成为任天堂 Game Boy 的随机器首发游戏，并在此后的四十年里卖出数以亿计的份数。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 时间线 ============ -->
+<section id="story">
+  <div class="wrap">
+    <div class="sec-head">
+      <span>02 / TIMELINE</span>
+      <h2>一段跨越铁幕的历史</h2>
+      <p>从实验室的字符界面，到全球最畅销的掌机游戏，中间隔着一场长达十年的版权拉锯。</p>
+    </div>
+    <div class="timeline">
+      <div class="tl-item">
+        <b>1984</b><h4>诞生</h4>
+        <p>帕基特诺夫在莫斯科的苏联科学院计算机中心写出第一版，用字符方块在终端上运行，取名 Tetris（tetra + tennis 的组合词）。</p>
+      </div>
+      <div class="tl-item">
+        <b>1985</b><h4>向个人电脑移植</h4>
+        <p>同事瓦季姆·格拉西莫夫将其移植到 IBM PC，游戏开始在东欧与西欧的地下渠道流传。</p>
+      </div>
+      <div class="tl-item">
+        <b>1988</b><h4>版权之争开始</h4>
+        <p>匈牙利、英国、苏联多方机构都声称拥有授权，同一款游戏被不同公司以不同名义发行，纠纷愈演愈烈。</p>
+      </div>
+      <div class="tl-item">
+        <b>1989</b><h4>Game Boy 版</h4>
+        <p>任天堂取得掌机版权，《Tetris》作为 Game Boy 首发游戏之一随机器发售，成为推动这台掌机风靡全球的关键作品。</p>
+      </div>
+      <div class="tl-item">
+        <b>1996</b><h4>版权回归</h4>
+        <p>帕基特诺夫与亨克·罗杰斯共同成立 The Tetris Company，版权终于回到创作者手中。</p>
+      </div>
+      <div class="tl-item">
+        <b>今天</b><h4>文化符号</h4>
+        <p>它被移植到几乎所有带屏幕的设备上，成为电子游戏史上辨识度最高的作品之一。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 七种方块 ============ -->
+<section id="pieces">
+  <div class="wrap">
+    <div class="sec-head">
+      <span>03 / MECHANICS</span>
+      <h2>七种方块，无限可能</h2>
+      <p>所有规则都建立在这七个形状上。它们被称为 Tetromino，每个都由四格方块拼成。</p>
+    </div>
+    <div class="pieces" id="pieceList"></div>
+  </div>
+</section>
+
+<!-- ============ 游戏 ============ -->
+<section id="play" class="game-sec">
+  <div class="wrap">
+    <div class="sec-head">
+      <span>04 / PLAY</span>
+      <h2>现在，轮到你了</h2>
+      <p>方向键移动与旋转，空格瞬降。消一行得 100 分，每消 10 行升一级，速度会越来越快。</p>
+    </div>
+    <div class="game">
+      <canvas id="board" width="300" height="600"></canvas>
+      <div class="side">
+        <div class="stat"><span>分数</span><b id="score">0</b></div>
+        <div class="stat"><span>消行</span><b id="lines">0</b></div>
+        <div class="stat"><span>等级</span><b id="level">1</b></div>
+        <canvas id="next" width="120" height="120"></canvas>
+        <div class="keys">
+          <kbd>←</kbd> <kbd>→</kbd> 移动　<kbd>↑</kbd> 旋转<br>
+          <kbd>↓</kbd> 软降　<kbd>空格</kbd> 瞬降<br>
+          <kbd>P</kbd> 暂停　<kbd>R</kbd> 重开
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btnPause">暂停</button>
+          <button class="btn ghost" id="btnRestart">重开</button>
+        </div>
+        <div class="touch">
+          <button data-act="left">←</button>
+          <button data-act="rotate">↻</button>
+          <button data-act="right">→</button>
+          <button data-act="down">↓</button>
+          <button data-act="drop" style="font-size:.85rem">瞬降</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>本项目为《人工智能导论》课程大作业，使用 AI 工具辅助完成。</p>
+    <p style="margin-top:8px">
+      参考资料：<a href="https://tetris.com/" target="_blank" rel="noopener">Tetris 官方网站</a> ·
+      <a href="https://en.wikipedia.org/wiki/Tetris" target="_blank" rel="noopener">Wikipedia: Tetris</a> ·
+      <a href="https://en.wikipedia.org/wiki/Alexey_Pajitnov" target="_blank" rel="noopener">Wikipedia: Alexey Pajitnov</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+/* ================= 七种方块展示 ================= */
+(function buildPieceCards() {
+  const shapes = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    J: [[1,0,0],[1,1,1],[0,0,0]],
+    L: [[0,0,1],[1,1,1],[0,0,0]],
+    O: [[1,1],[1,1]],
+    S: [[0,1,1],[1,1,0],[0,0,0]],
+    T: [[0,1,0],[1,1,1],[0,0,0]],
+    Z: [[1,1,0],[0,1,1],[0,0,0]]
+  };
+  const box = document.getElementById('pieceList');
+  Object.keys(shapes).forEach(name => {
+    const m = shapes[name];
+    const card = document.createElement('div');
+    card.className = 'piece';
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(' + m[0].length + ', 14px)';
+    m.forEach(row => row.forEach(v => {
+      const c = document.createElement('div');
+      c.className = 'cell' + (v ? ' on' : '');
+      grid.appendChild(c);
+    }));
+    card.appendChild(grid);
+    const label = document.createElement('span');
+    label.textContent = name;
+    card.appendChild(label);
+    box.appendChild(card);
+  });
+})();
+
+/* ================= 俄罗斯方块 ================= */
+(function tetris() {
+  const COLS = 10, ROWS = 20, SIZE = 30;
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const nextCanvas = document.getElementById('next');
+  const nctx = nextCanvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const linesEl = document.getElementById('lines');
+  const levelEl = document.getElementById('level');
+
+  const COLORS = {
+    I: '#3ddc97', J: '#4d7cfe', L: '#f7a531',
+    O: '#f7d94c', S: '#4dd7c4', T: '#b06cff', Z: '#ff5f7a'
+  };
+  const SHAPES = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    J: [[1,0,0],[1,1,1],[0,0,0]],
+    L: [[0,0,1],[1,1,1],[0,0,0]],
+    O: [[1,1],[1,1]],
+    S: [[0,1,1],[1,1,0],[0,0,0]],
+    T: [[0,1,0],[1,1,1],[0,0,0]],
+    Z: [[1,1,0],[0,1,1],[0,0,0]]
+  };
+  const NAMES = Object.keys(SHAPES);
+
+  let board, cur, next, score, lines, level, dropTimer, dropInterval, over, paused, lastTime, bag;
+
+  function emptyBoard() {
+    return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+  }
+
+  function refillBag() {
+    bag = NAMES.slice();
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+  }
+
+  function takeFromBag() {
+    if (!bag || bag.length === 0) refillBag();
+    return bag.pop();
+  }
+
+  function makePiece(name) {
+    const shape = SHAPES[name].map(row => row.slice());
+    return { name, shape, x: Math.floor((COLS - shape[0].length) / 2), y: -1 };
+  }
+
+  function collide(piece, ox, oy, shape) {
+    const m = shape || piece.shape;
+    for (let y = 0; y < m.length; y++) {
+      for (let x = 0; x < m[y].length; x++) {
+        if (!m[y][x]) continue;
+        const nx = piece.x + x + (ox || 0);
+        const ny = piece.y + y + (oy || 0);
+        if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+        if (ny >= 0 && board[ny][nx]) return true;
+      }
+    }
+    return false;
+  }
+
+  function rotate(shape) {
+    const n = shape.length;
+    const out = Array.from({ length: n }, () => Array(n).fill(0));
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) out[x][n - 1 - y] = shape[y][x];
+    }
+    return out;
+  }
+
+  function merge(piece) {
+    piece.shape.forEach((row, y) => row.forEach((v, x) => {
+      if (!v) return;
+      const by = piece.y + y;
+      if (by >= 0) board[by][piece.x + x] = piece.name;
+    }));
+  }
+
+  function clearLines() {
+    let cleared = 0;
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (board[y].every(cell => cell)) {
+        board.splice(y, 1);
+        board.unshift(Array(COLS).fill(null));
+        cleared++;
+        y++;
+      }
+    }
+    if (cleared) {
+      const table = { 1: 100, 2: 300, 3: 500, 4: 800 };
+      score += (table[cleared] || 0) * level;
+      lines += cleared;
+      const newLevel = Math.floor(lines / 10) + 1;
+      if (newLevel !== level) {
+        level = newLevel;
+        dropInterval = Math.max(80, 800 - (level - 1) * 70);
+      }
+      updateStats();
+    }
+  }
+
+  function spawn() {
+    cur = makePiece(next);
+    next = takeFromBag();
+    drawNext();
+    if (collide(cur, 0, 0)) {
+      over = true;
+      cur = null;
+    }
+  }
+
+  function hardDrop() {
+    while (!collide(cur, 0, 1)) cur.y++;
+    lock();
+  }
+
+  function lock() {
+    merge(cur);
+    clearLines();
+    spawn();
+    dropTimer = 0;
+  }
+
+  function move(dir) {
+    if (!cur || over || paused) return;
+    if (!collide(cur, dir, 0)) cur.x += dir;
+  }
+
+  function rotateCurrent() {
+    if (!cur || over || paused) return;
+    const turned = rotate(cur.shape);
+    // 简易踢墙：左、右、上依次尝试
+    const kicks = [[0,0], [-1,0], [1,0], [-2,0], [2,0], [0,-1]];
+    for (const [dx, dy] of kicks) {
+      if (!collide(cur, dx, dy, turned)) {
+        cur.shape = turned;
+        cur.x += dx;
+        cur.y += dy;
+        return;
+      }
+    }
+  }
+
+  function softDrop() {
+    if (!cur || over || paused) return;
+    if (!collide(cur, 0, 1)) {
+      cur.y++;
+      dropTimer = 0;
+    } else {
+      lock();
+    }
+  }
+
+  /* ---------- 绘制 ---------- */
+  function drawCell(c, x, y, size, color) {
+    c.fillStyle = color;
+    c.fillRect(x + 1, y + 1, size - 2, size - 2);
+    c.fillStyle = 'rgba(255,255,255,.18)';
+    c.fillRect(x + 1, y + 1, size - 2, 3);
+  }
+
+  function drawBoard() {
+    ctx.fillStyle = '#070a11';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.05)';
+    ctx.lineWidth = 1;
+    for (let x = 1; x < COLS; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * SIZE + .5, 0);
+      ctx.lineTo(x * SIZE + .5, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 1; y < ROWS; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * SIZE + .5);
+      ctx.lineTo(canvas.width, y * SIZE + .5);
+      ctx.stroke();
+    }
+
+    board.forEach((row, y) => row.forEach((cell, x) => {
+      if (cell) drawCell(ctx, x * SIZE, y * SIZE, SIZE, COLORS[cell]);
+    }));
+
+    if (cur) {
+      cur.shape.forEach((row, y) => row.forEach((v, x) => {
+        if (!v) return;
+        if (cur.y + y < 0) return;
+        drawCell(ctx, (cur.x + x) * SIZE, (cur.y + y) * SIZE, SIZE, COLORS[cur.name]);
+      }));
+    }
+
+    if (over) {
+      ctx.fillStyle = 'rgba(7,10,17,.82)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#3ddc97';
+      ctx.font = 'bold 30px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 10);
+      ctx.fillStyle = '#8b98ad';
+      ctx.font = '15px system-ui, sans-serif';
+      ctx.fillText('按 R 重新开始', canvas.width / 2, canvas.height / 2 + 30);
+    } else if (paused) {
+      ctx.fillStyle = 'rgba(7,10,17,.82)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#e6edf7';
+      ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('已暂停', canvas.width / 2, canvas.height / 2);
+    }
+  }
+
+  function drawNext() {
+    nctx.fillStyle = '#070a11';
+    nctx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+    if (!next) return;
+    const shape = SHAPES[next];
+    const s = 22;
+    // 计算实际占用范围以居中
+    let minX = 9, maxX = -1, minY = 9, maxY = -1;
+    shape.forEach((row, y) => row.forEach((v, x) => {
+      if (v) {
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      }
+    }));
+    const w = (maxX - minX + 1) * s;
+    const h = (maxY - minY + 1) * s;
+    const ox = (nextCanvas.width - w) / 2 - minX * s;
+    const oy = (nextCanvas.height - h) / 2 - minY * s;
+    shape.forEach((row, y) => row.forEach((v, x) => {
+      if (v) drawCell(nctx, ox + x * s, oy + y * s, s, COLORS[next]);
+    }));
+  }
+
+  function updateStats() {
+    scoreEl.textContent = score;
+    linesEl.textContent = lines;
+    levelEl.textContent = level;
+  }
+
+  /* ---------- 主循环 ---------- */
+  function loop(t) {
+    if (!lastTime) lastTime = t;
+    const dt = Math.min(t - lastTime, 100);
+    lastTime = t;
+
+    if (!over && !paused) {
+      dropTimer += dt;
+      if (dropTimer > dropInterval) {
+        dropTimer = 0;
+        if (cur && !collide(cur, 0, 1)) cur.y++;
+        else if (cur) lock();
+      }
+    }
+    drawBoard();
+    requestAnimationFrame(loop);
+  }
+
+  function restart() {
+    board = emptyBoard();
+    score = 0; lines = 0; level = 1;
+    dropInterval = 800; dropTimer = 0;
+    over = false; paused = false; lastTime = 0;
+    bag = null; refillBag();
+    next = takeFromBag();
+    spawn();
+    updateStats();
+    drawNext();
+    document.getElementById('btnPause').textContent = '暂停';
+  }
+
+  /* ---------- 输入 ---------- */
+  document.addEventListener('keydown', e => {
+    const k = e.key;
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(k)) e.preventDefault();
+
+    if (k === 'ArrowLeft') move(-1);
+    else if (k === 'ArrowRight') move(1);
+    else if (k === 'ArrowUp') rotateCurrent();
+    else if (k === 'ArrowDown') softDrop();
+    else if (k === ' ') { if (cur && !over && !paused) hardDrop(); }
+    else if (k === 'p' || k === 'P') togglePause();
+    else if (k === 'r' || k === 'R') restart();
+  });
+
+  function togglePause() {
+    if (over) return;
+    paused = !paused;
+    document.getElementById('btnPause').textContent = paused ? '继续' : '暂停';
+  }
+
+  document.getElementById('btnPause').addEventListener('click', togglePause);
+  document.getElementById('btnRestart').addEventListener('click', restart);
+
+  document.querySelectorAll('.touch button').forEach(b => {
+    b.addEventListener('click', () => {
+      const act = b.dataset.act;
+      if (act === 'left') move(-1);
+      else if (act === 'right') move(1);
+      else if (act === 'rotate') rotateCurrent();
+      else if (act === 'down') softDrop();
+      else if (act === 'drop') { if (cur && !over && !paused) hardDrop(); }
+    });
+  });
+
+  restart();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
